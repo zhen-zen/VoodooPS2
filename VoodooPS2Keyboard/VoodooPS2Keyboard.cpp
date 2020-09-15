@@ -391,8 +391,17 @@ IOACPIPlatformDevice* ApplePS2Keyboard::getBrightnessPanel() {
     };
 
     if (info) {
-        if (info->videoBuiltin != nullptr)
+        if (info->videoBuiltin != nullptr) {
             panel = getAcpiDevice(getDevicebyAddress(info->videoBuiltin, 0x400));
+
+            //
+            // On some IceLake Laptops, address of display output device may not export panel
+            // information, use 1f for DD1F instead
+            //
+            if (panel == nullptr)
+                if (BaseDeviceInfo::get().cpuGeneration == CPUInfo::CpuGeneration::IceLake)
+                    panel = getAcpiDevice(getDevicebyAddress(info->videoBuiltin, 0x1f));
+        }
 
         if (panel == nullptr)
             for (size_t i = 0; panel == nullptr && i < info->videoExternal.size(); ++i)
@@ -924,7 +933,7 @@ void ApplePS2Keyboard::setParamPropertiesGated(OSDictionary * dict)
     xml = OSDynamicCast(OSBoolean, dict->getObject(kUseISOLayoutKeyboard));
     if (xml) {
         if (xml->isTrue()) {
-            _PS2ToADBMap[0x29]  = _PS2ToADBMapMapped[0x56];     //Europe2 '¤º'
+            _PS2ToADBMap[0x29]  = _PS2ToADBMapMapped[0x56];     //Europe2 'Â¤Âº'
             _PS2ToADBMap[0x56]  = _PS2ToADBMapMapped[0x29];     //Grave '~'
         }
         else {
